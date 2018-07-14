@@ -1,0 +1,32 @@
+* pyllist-0.3 (2017-11-18)
+
+  - support for Python 3.x (closes issue #5)
+  - refactoring and fixes of unit tests
+  - fixed list size after double removal of a node (closes issue #6)
+
+-----------------------------------------------------------------------
+
+* pyllist-0.2 (2017-07-23)
+
+  - fixed updating of 'first' and 'last' list property (closes issue #3)
+
+-----------------------------------------------------------------------
+
+* pyllist-0.1.1 (2013-03-02)
+
+  Values stored in nodes are mutable.
+
+  Added new iteration methods:
+    - lst.iternodes(to) to iterate over nodes instead of values;
+    - node.iternext(to) and node.iterprev(to) to iterate from a given node to
+      the tail or head of the list (or a node specified in the argument 'to').
+
+  An example of usage can be found in ./examples/insertion_sort.py
+
+  lst.insert() has new attribute [after] in addition to the existing [before]
+
+-----------------------------------------------------------------------
+
+* pyllist-0.1 (2012-01-01)
+
+  Initial release
