@@ -10,6 +10,7 @@ import argparse
 
 class coverageRanking():
     tests_by_class = {}
+    file_coverage = {}
 
     # Pass in the package that you are covering and tests dir
     def __init__(self, cov_package, test_dir='test'):
@@ -44,19 +45,21 @@ class coverageRanking():
         for test_file, test_classes in self.tests_by_class.items():
             for test_class, test_list in test_classes.items():
                 for test in test_list:
+                    full_test_name = test_file + '::' + test_class + '::' + test
                     # Run test with coverage
                     # py.test --cov=pyllist test/test_pyllist.py::testdllist::test_init_empty
                     command = 'py.test --cov-report term-missing --cov=' + self.cov_package + ' ' \
-                            + test_file + '::' + test_class + '::' + test 
+                            + full_test_name 
+                    pprint(command)
                     cov_report = subprocess.run(command.split(' '), stdout=subprocess.PIPE)
-                    self.parseCovReport(cov_report.stdout.decode('utf-8'))
+                    self.parseCovReport(full_test_name, cov_report.stdout.decode('utf-8'))
                     # Copy coverage to named data file
                     new_cov_file = '.coverage.' + test_class + '.' + test
                     call(['mv', '.coverage', 'covData/'+new_cov_file])
 
     # Report Format: ['Name', 'Stmts', 'Miss', 'Cover', 'Missing']
-    def parseCovReport(self, cov_report):
-        self.file_coverage = {}
+    def parseCovReport(self, test_name, cov_report):
+        self.file_coverage[test_name] = {}
         lines = cov_report.split('\n')
         for line in lines:
             # If python file
@@ -64,10 +67,10 @@ class coverageRanking():
             if len(data):
                 file_name = data[0]
                 if file_name[-3:] == '.py':
-                    self.file_coverage[file_name] = {}
+                    self.file_coverage[test_name][file_name] = {}
                     # Account for 100% format
                     if ((len(data) > 3) and (data[3] == '100%')):
-                        self.file_coverage[file_name] = {
+                        self.file_coverage[test_name][file_name] = {
                                 'statements': data[1],
                                 'miss': '0',
                                 'cover': data[2],
@@ -75,13 +78,12 @@ class coverageRanking():
                         }
                     # Account for 0%-99% format
                     elif (len(data) > 4):
-                        self.file_coverage[file_name] = {
+                        self.file_coverage[test_name][file_name] = {
                                 'statements': data[1],
                                 'miss': data[2],
                                 'cover': data[3],
                                 'missing': data[4],
                         }
-        pprint(self.file_coverage)
 
 
     def rankTests(self):
@@ -108,3 +110,4 @@ if __name__ == "__main__":
     ranker = coverageRanking(args.cov_package, args.test_dir)
     ranker.parseTests()
     ranker.runTests()
+    pprint(ranker.file_coverage)
