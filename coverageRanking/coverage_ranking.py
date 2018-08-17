@@ -46,7 +46,6 @@ class coverageRanking():
         call(['mkdir', 'covData'])
         for test_file, test_classes in self.tests_by_class.items():
             for test_class, test_list in test_classes.items():
-                print('\n\n\n')
                 i =0
                 for test in test_list:
                   i+=1
@@ -107,28 +106,29 @@ class coverageRanking():
                     elif (len(data) > 4):
                         line_coverage = self.parseMissingLines(file_name, data[4])
                         self.file_coverage[test_name][file_name] = line_coverage
+        # DEBUG: OverallCovered result is different
+        pprint(test_name)
         pprint(self.countOverallCovered(self.file_coverage[test_name]))
+        print("\n")
 
 
     def countOverallCovered(self, test_cov_dict):
         covered_count = 0
         for file_name,file_cov in test_cov_dict.items():
             for line in file_cov:
-                    if line:
-                        covered_count+=1
-        #pprint(covered_count)
+                if line is True:
+                    covered_count+=1
         return covered_count
 
-    def coverage_merger(self, array1, array2):
-        array3 = []
-        i = 0
-        while(i < len(array1)):
-            if array1[i] == True or array2[i] == True:
-                array3.append(True)
-            else:
-                array3.append(False)
-            i += 1
-        return array3
+    def coverage_merger(self, test_cov_dict1, test_cov_dict2):
+        merged_dict = {}
+        for file_name,file_cov1 in test_cov_dict1.items():
+            file_cov2 = test_cov_dict2[file_name]
+            merged_dict[file_name] = []
+            for i in range(0, len(file_cov1)):
+                merged_dict[file_name].append(file_cov1[i] or file_cov2[i])
+        return merged_dict
+      
 
     def rankTests(self):
         call(['cd', self.test_dir])
@@ -142,10 +142,16 @@ class coverageRanking():
         base_cov = 0
         for test_name, test_dict in self.file_coverage.items():
             test_cov = self.countOverallCovered(test_dict)
+            # DEBUG: All te same?!?!
+            pprint(test_name)
+            pprint(test_cov)
+            print('\n')
             if test_cov > base_cov:
-                pprint(test_name)
                 base_cov = test_cov
                 base_test = test_name
+
+        pprint("Highest!!!")
+        pprint(base_cov)
 
         # TODO: start with base_test, count non-overlapping coverage for each other test
         # merge test with biggest non-overlapping cov
@@ -154,13 +160,15 @@ class coverageRanking():
         for file_name, file_cov in self.file_coverage[base_test].items():
             current_smoke_merge[file_name] = file_cov
         smoke_tests = [base_test]
+        highest_merge_test = base_test
+        highest_merge = self.file_coverage[base_test]
         highest_merge_count = self.countOverallCovered(self.file_coverage[base_test])
-        for i in range(0,self.num_smoke_tests):
+        pprint("Highest!!!")
+        pprint(highest_merge_count)
+        for i in range(1,self.num_smoke_tests):
             for test_name, test_dict in self.file_coverage.items():
                 if test_name not in smoke_tests:
-                    merged_files = {}
-                    for file_name,file_cov in test_dict.items():
-                        merged_files[file_name] = self.coverage_merger(current_smoke_merge[file_name],file_cov)
+                    merged_files = self.coverage_merger(current_smoke_merge,test_dict)
                     merge_count = self.countOverallCovered(merged_files)
                     if merge_count >= highest_merge_count:
                         highest_merge = merged_files
