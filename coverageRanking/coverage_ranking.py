@@ -113,6 +113,25 @@ class coverageRanking():
                                 'missing': line_coverage,
                         }
 
+    def countOverallCovered(self, test_cov_dir):
+        covered_count = 0
+        for file_name,file_cov in test_cov_dir.items():
+            if 'missing' in file_cov.keys():
+                for line in file_cov['missing']:
+                    if line:
+                        covered_count+=1
+        return covered_count
+
+    def coverage_merger(self, array1, array2):
+        array3 = []
+        i = 0
+        while(i < len(array1)):
+            if array1[i] == True or array2[i] == True:
+                array3.append(True)
+            else:
+                array3.append(False)
+            i += 1
+        return array3
 
     def rankTests(self):
         call(['cd', self.test_dir])
@@ -122,6 +141,20 @@ class coverageRanking():
         # {test_name: {file_name: { 'missing': [T,T,T,F,F,T,...] }}}
         # The missing array for each file has len = # lines in file
         #       and T=covered, F=missed
+
+        # Start with test that covers most (heuristic)
+        base_cov = 0
+        for test_name, test_dict in self.file_coverage.items():
+            test_cov = self.countOverallCovered(test_dict)
+            if test_cov > base_cov:
+                pprint(test_name)
+                base_cov = test_cov
+                base_test = test_name
+
+        # TODO: start with base_test, count non-overlapping coverage for each other test
+        # merge test with biggest non-overlapping cov
+        # repeat until num_smoke_tests
+
 
 
 if __name__ == "__main__":
@@ -142,3 +175,4 @@ if __name__ == "__main__":
     ranker.parseTests()
     ranker.runTests()
     #pprint(ranker.file_coverage)
+    ranker.rankTests()
