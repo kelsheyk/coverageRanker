@@ -11,6 +11,7 @@ import argparse
 class coverageRanking():
     tests_by_class = {}
     file_coverage = {}
+    file_line_representations = {}
 
     # Pass in the package that you are covering and tests dir
     def __init__(self, cov_package, test_dir='test'):
@@ -50,13 +51,35 @@ class coverageRanking():
                     # py.test --cov=pyllist test/test_pyllist.py::testdllist::test_init_empty
                     command = 'py.test --cov-report term-missing --cov=' + self.cov_package + ' ' \
                             + full_test_name 
-                    pprint(command)
                     cov_report = subprocess.run(command.split(' '), stdout=subprocess.PIPE)
                     self.parseCovReport(full_test_name, cov_report.stdout.decode('utf-8'))
                     # Copy coverage to named data file
                     new_cov_file = '.coverage.' + test_class + '.' + test
                     call(['mv', '.coverage', 'covData/'+new_cov_file])
 
+    def parseMissingLines(self, file_name, string_missing):
+        continuous_string_match = re.compile(r'(\d+)-(\d+)')
+        individual_line_string_match = re.compile(r'(\d+)')
+        line_arr = self.file_line_representations[file_name]
+        for missing in string_missing.split(','):
+            if re.search(continuous_string_match, missing):
+                first = int(re.search(continuous_string_match, missing).group(1))
+                last = int(re.search(continuous_string_match, missing).group(2))
+                for i in range(first,last):
+                    line_arr[i] = False
+            elif re.search(individual_line_string_match, missing):
+                index = int(re.search(individual_line_string_match, missing).group(1))
+                line_arr[index] = False
+        return line_arr
+
+
+    def file_len(self, fname):
+        with open(fname) as f:
+            i = 1
+            for line in enumerate(f):
+                i+=1
+            return i
+    
     # Report Format: ['Name', 'Stmts', 'Miss', 'Cover', 'Missing']
     def parseCovReport(self, test_name, cov_report):
         self.file_coverage[test_name] = {}
@@ -68,21 +91,26 @@ class coverageRanking():
                 file_name = data[0]
                 if file_name[-3:] == '.py':
                     self.file_coverage[test_name][file_name] = {}
+                    if file_name not in self.file_line_representations:
+                        file_lines = self.file_len(file_name)
+                        self.file_line_representations[file_name] = [True for i in range(0,file_lines)]
                     # Account for 100% format
                     if ((len(data) > 3) and (data[3] == '100%')):
+                        line_coverage = self.parseMissingLines(file_name,'')
                         self.file_coverage[test_name][file_name] = {
                                 'statements': data[1],
                                 'miss': '0',
                                 'cover': data[2],
-                                'missing': '',
+                                'missing': line_coverage,
                         }
                     # Account for 0%-99% format
                     elif (len(data) > 4):
+                        line_coverage = self.parseMissingLines(file_name, data[4])
                         self.file_coverage[test_name][file_name] = {
                                 'statements': data[1],
                                 'miss': data[2],
                                 'cover': data[3],
-                                'missing': data[4],
+                                'missing': line_coverage,
                         }
 
 
@@ -90,7 +118,10 @@ class coverageRanking():
         call(['cd', self.test_dir])
         # TODO: iterate over .coverage files, combining & comparing
         # Leverage self.file_coverage
-        
+        # At this point, self.file_coverage has:
+        # {test_name: {file_name: { 'missing': [T,T,T,F,F,T,...] }}}
+        # The missing array for each file has len = # lines in file
+        #       and T=covered, F=missed
 
 
 if __name__ == "__main__":
@@ -110,4 +141,4 @@ if __name__ == "__main__":
     ranker = coverageRanking(args.cov_package, args.test_dir)
     ranker.parseTests()
     ranker.runTests()
-    pprint(ranker.file_coverage)
+    #pprint(ranker.file_coverage)
