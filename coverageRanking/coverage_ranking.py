@@ -49,7 +49,7 @@ class coverageRanking():
                 i =0
                 for test in test_list:
                   i+=1
-                  if i<20:
+                  if i<10:
                     full_test_name = test_file + '::' + test_class + '::' + test
                     # Run test with coverage
                     # py.test --cov=pyllist test/test_pyllist.py::testdllist::test_init_empty
@@ -64,7 +64,7 @@ class coverageRanking():
     def parseMissingLines(self, file_name, string_missing):
         continuous_string_match = re.compile(r'(\d+)-(\d+)')
         individual_line_string_match = re.compile(r'(\d+)')
-        line_arr = self.file_line_representations[file_name]
+        line_arr = self.file_line_representations[file_name].copy()
         for missing in string_missing.split(','):
             if re.search(continuous_string_match, missing):
                 first = int(re.search(continuous_string_match, missing).group(1))
@@ -100,16 +100,12 @@ class coverageRanking():
                         self.file_line_representations[file_name] = [True for i in range(0,file_lines)]
                     # Account for 100% format
                     if ((len(data) > 3) and (data[3] == '100%')):
-                        line_coverage = self.parseMissingLines(file_name,'')
+                        line_coverage = self.file_line_representations[file_name]
                         self.file_coverage[test_name][file_name] = line_coverage
                     # Account for 0%-99% format
                     elif (len(data) > 4):
                         line_coverage = self.parseMissingLines(file_name, data[4])
                         self.file_coverage[test_name][file_name] = line_coverage
-        # DEBUG: OverallCovered result is different
-        pprint(test_name)
-        pprint(self.countOverallCovered(self.file_coverage[test_name]))
-        print("\n")
 
 
     def countOverallCovered(self, test_cov_dict):
@@ -141,19 +137,14 @@ class coverageRanking():
         # Start with test that covers most (heuristic)
         base_cov = 0
         for test_name, test_dict in self.file_coverage.items():
+            #print(test_dict)
             test_cov = self.countOverallCovered(test_dict)
-            # DEBUG: All te same?!?!
-            pprint(test_name)
-            pprint(test_cov)
-            print('\n')
             if test_cov > base_cov:
                 base_cov = test_cov
                 base_test = test_name
 
-        pprint("Highest!!!")
-        pprint(base_cov)
 
-        # TODO: start with base_test, count non-overlapping coverage for each other test
+        # start with base_test, count non-overlapping coverage for each other test
         # merge test with biggest non-overlapping cov
         # repeat until num_smoke_tests
         current_smoke_merge = {}
@@ -163,8 +154,6 @@ class coverageRanking():
         highest_merge_test = base_test
         highest_merge = self.file_coverage[base_test]
         highest_merge_count = self.countOverallCovered(self.file_coverage[base_test])
-        pprint("Highest!!!")
-        pprint(highest_merge_count)
         for i in range(1,self.num_smoke_tests):
             for test_name, test_dict in self.file_coverage.items():
                 if test_name not in smoke_tests:
@@ -174,13 +163,10 @@ class coverageRanking():
                         highest_merge = merged_files
                         highest_merge_count = merge_count
                         highest_merge_test = test_name
-            #pprint(highest_merge_test)
-            #pprint(highest_merge_count)
             smoke_tests.append(highest_merge_test)
             current_smoke_merge = highest_merge
         print('\n\n\n')
         pprint(smoke_tests)
-        pprint(highest_merge_count)
 
 
 
@@ -203,5 +189,4 @@ if __name__ == "__main__":
     ranker = coverageRanking(args.cov_package, args.test_dir)
     ranker.parseTests()
     ranker.runTests()
-    #pprint(ranker.file_coverage)
     ranker.rankTests()
