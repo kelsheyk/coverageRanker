@@ -46,10 +46,7 @@ class coverageRanking():
         call(['mkdir', 'covData'])
         for test_file, test_classes in self.tests_by_class.items():
             for test_class, test_list in test_classes.items():
-                i =0
                 for test in test_list:
-                  i+=1
-                  if i<10:
                     full_test_name = test_file + '::' + test_class + '::' + test
                     # Run test with coverage
                     # py.test --cov=pyllist test/test_pyllist.py::testdllist::test_init_empty
